@@ -1,0 +1,20 @@
+
+# dbsnp VCF file with SNP variants
+dbsnp: "LICENSE"
+
+# biallelic, multi-sample VCF with cohort
+# genotypes. Must be relative to same reference
+# as dbsnp VCF
+genotypes: "LICENSE"
+
+# file with a list of dbSNP IDs specifying the
+# SNPs to be used for LD computation. One ID
+# per line.
+targets: "LICENSE"
+
+# a PED file specifying trio relationships.
+# unrelated samples must be listed as well.
+ped: "LICENSE"
+
+# name of the output folder
+outname: "LICENSE" 

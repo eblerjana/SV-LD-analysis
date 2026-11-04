@@ -1,0 +1,13 @@
+configfile: "config/config.yml"
+
+DBSNP = config["dbsnp"]
+GENOTYPES = config["genotypes"]
+TARGETS = config["targets"]
+PED = config["ped"]
+RESULTS = config["outname"]
+
+include: "rules/compute-ld.smk"
+
+rule all:
+	input:
+		expand("{results}/ld/ld-sv-targets.ld.gz", results = RESULTS)

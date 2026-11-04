@@ -1,0 +1,3 @@
+name: gatk
+dependencies:
+  - gatk4
