@@ -28,6 +28,9 @@ rule prepare_variant_ids:
 		"{results}/genotypes/genotypes-biallelic-svids.benchmark"
 	conda:
 		"../envs/bcftools.yml"
+	resources:
+		mem_mb = 50000,
+		walltime = "05:00:00"
 	shell:
 		"""
 		bcftools view -S {input.samples} --force-samples {input.genotypes} | python3 workflow/scripts/annotate.py | bgzip > {output}
@@ -51,7 +54,7 @@ rule annotate:
 		"../envs/gatk4.yml"
 	resources:
 		mem_mb = 50000,
-#		walltime = "5:00:00"
+		walltime = "5:00:00"
 	shell:
 		"""
 		gatk VariantAnnotator --variant {input.genotypes} --output {output} --dbsnp {input.dbsnp} &> {log}
@@ -74,7 +77,7 @@ rule add_tags:
 		"../envs/bcftools.yml"
 	resources:
 		mem_mb = 50000,
-#		walltime = "2:00:00"
+		walltime = "2:00:00"
 	shell:
 		"""
 		bcftools +fill-tags {input} -Oz -o {output} -- -t AN,AC,AF &> {log}
@@ -100,11 +103,11 @@ rule run_plink:
 		"../envs/plink.yml"
 	resources:
 		mem_mb = 50000,
-#		walltime = "2:00:00"
+		walltime = "2:00:00"
 	threads: 5
 	shell:
 		"""
 		plink --threads {threads} --vcf {input.genotypes} --vcf-half-call m \
-      --ld-snp-list {input.target} --r2 --with-freqs \
-      --ld-window-kb 500 --ld-window 99999 --ld-window-r2 0.6 --out {params.outname}
+		--ld-snp-list {input.target} --r2 --with-freqs \
+		--ld-window-kb 500 --ld-window 99999 --ld-window-r2 0.6 --out {params.outname}
 		"""

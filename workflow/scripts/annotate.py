@@ -6,7 +6,6 @@ for line in sys.stdin:
 		print(line[:-1])
 		continue
 	fields = line.strip().split()
-	info = { i.split('=')[0] : i.split('=')[1] for i in fields[7].split(';') if '=' in i }
 
 	# make sure VCF is biallelic
 	is_biallelic = len(fields[4].split(',')) == 1
@@ -16,12 +15,9 @@ for line in sys.stdin:
 		sys.exit(1)
 
 	varlen = abs(len(fields[3]) - len(fields[4]))
-	if 'ID' in info:
-		varid = info['ID']
-	else:
-		varid = "variant" + str(varidx)
-
 	if varlen >= 50:
+		info = { i.split('=')[0] : i.split('=')[1] for i in fields[7].split(';') if '=' in i }
+		varid = info['ID'] if 'ID' in info else "variant" + str(varidx)
 		fields[2] = varid
 	else:
 		fields[2] = '.'
