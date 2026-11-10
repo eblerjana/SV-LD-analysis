@@ -23,18 +23,20 @@ rule prepare_variant_ids:
 		genotypes = GENOTYPES,
 		samples = "{results}/unrelated-samples.tsv"
 	output:
-		"{results}/genotypes/genotypes-biallelic-svids.vcf.gz"
+		vcf = "{results}/genotypes/genotypes-biallelic-svids.vcf.gz",
+		tsv = "{results}/genotypes/genotypes-biallelic-svids.tsv"
 	benchmark: 
 		"{results}/genotypes/genotypes-biallelic-svids.benchmark"
 	conda:
 		"../envs/bcftools.yml"
+	threads: 10
 	resources:
 		mem_mb = 50000,
-		walltime = "05:00:00"
+		walltime = "10:00:00"
 	shell:
 		"""
-		bcftools view -S {input.samples} --force-samples {input.genotypes} | python3 workflow/scripts/annotate.py | bgzip > {output}
-		tabix -p vcf {output}
+		bcftools view -S {input.samples} --threads {threads} --force-samples {input.genotypes} | python3 workflow/scripts/annotate.py {output.tsv} | bgzip > {output.vcf}
+		tabix -p vcf {output.vcf}
 		"""
 
 rule annotate:
@@ -51,36 +53,52 @@ rule annotate:
 	benchmark:
 		"{results}/genotypes/genotypes-biallelic-svids-annotated.benchmark"
 	conda:
-		"../envs/gatk4.yml"
+		"../envs/bcftools.yml"
 	resources:
 		mem_mb = 50000,
-		walltime = "5:00:00"
+		walltime = "15:00:00"
+	threads: 16
 	shell:
 		"""
-		gatk VariantAnnotator --variant {input.genotypes} --output {output} --dbsnp {input.dbsnp} &> {log}
+		bcftools annotate -a {input.dbsnp} -c ID --collapse none --threads {threads} -Oz -o {output} {input.genotypes} &> {log}
+		tabix -p vcf {output}
 		"""
 
-
-rule add_tags:
+rule keep_unique_ids:
 	"""
-	Assign AN, AC and AF tags to each variant.
+	The dnSNP VCF might contain multiple records with the
+	same ID. Therefore, the same can occur in the annotated
+	VCF. Plink complains about duplicated IDs, so this step
+	drops variants corresponding to duplicated IDs.
 	"""
 	input:
 		"{results}/genotypes/genotypes-biallelic-svids-annotated.vcf.gz"
 	output:
-		"{results}/genotypes/genotypes-biallelic-svids-annotated-afs.vcf.gz"
-	log:
-		"{results}/genotypes/genotypes-biallelic-svids-annotated-afs.log"
+		vcf = "{results}/genotypes/genotypes-biallelic-svids-annotated-unique.vcf.gz",
+		tsv = "{results}/genotypes/genotypes-duplicated-IDs.tsv"
 	benchmark:
-		"{results}/genotypes/genotypes-biallelic-svids-annotated-afs.benchmark"
+		"{results}/genotypes/genotypes-biallelic-svids-annotated-unique.benchmark"
+	log:
+		"{results}/genotypes/genotypes-biallelic-svids-annotated-unique.log"
 	conda:
 		"../envs/bcftools.yml"
 	resources:
-		mem_mb = 50000,
-		walltime = "2:00:00"
+		mem_mb = 60000,
+		walltime = "15:00:00"
+	params:
+		tmpbase="."
+	threads: 8
 	shell:
 		"""
-		bcftools +fill-tags {input} -Oz -o {output} -- -t AN,AC,AF &> {log}
+		exec > {log} 2>&1
+		set -x
+
+		tmp=$(mktemp -d -p {params.tmpbase} sort_tmp.XXXXXX)
+		trap 'rm -rf "$tmp"' EXIT
+
+		bcftools query -f '%ID\\t%CHROM\\n' {input} | LC_ALL=C sort -u -S 8G --parallel={threads} -T \"$tmp\" | cut -f1 | LC_ALL=C uniq -d > {output.tsv}
+		bcftools view -e 'ID=@{output.tsv}' -Oz -o {output.vcf} {input}
+		bcftools index {output.vcf}
 		"""
 
 
@@ -90,9 +108,9 @@ rule run_plink:
 	"""
 	input:
 		target = TARGETS,
-		genotypes = "{results}/genotypes/genotypes-biallelic-svids-annotated-afs.vcf.gz"
+		genotypes = "{results}/genotypes/genotypes-biallelic-svids-annotated-unique.vcf.gz"
 	output:
-		"{results}/ld/ld-sv-targets.ld.gz"
+		"{results}/ld/ld-sv-targets.ld"
 	log:
 		"{results}/ld/ld-sv-targets.log"
 	benchmark:
@@ -102,12 +120,12 @@ rule run_plink:
 	conda:
 		"../envs/plink.yml"
 	resources:
-		mem_mb = 50000,
-		walltime = "2:00:00"
-	threads: 5
+		mem_mb = 80000,
+		walltime = "15:00:00"
+	threads: 10
 	shell:
 		"""
-		plink --threads {threads} --vcf {input.genotypes} --vcf-half-call m \
+		plink --memory 70000 --threads {threads} --vcf {input.genotypes} --vcf-half-call m \
 		--ld-snp-list {input.target} --r2 --with-freqs \
 		--ld-window-kb 500 --ld-window 99999 --ld-window-r2 0.6 --out {params.outname}
 		"""
