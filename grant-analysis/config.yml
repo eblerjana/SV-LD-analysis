@@ -1,0 +1,20 @@
+
+# dbsnp VCF file with SNP variants
+dbsnp: "/gpfs/project/projects/medbioinf/users/ebler/SFB-grant-hadi/LD-analysis/data/chm13v2.0_dbSNPv155.vcf.gz"
+
+# biallelic, multi-sample VCF with cohort
+# genotypes. Must be relative to same reference
+# as dbsnp VCF
+genotypes: "/gpfs/project/projects/medbioinf/users/ebler/haplotype-sampling/companion-paper/hprc2-companion-paper/genotyping-pipeline/results-hprc2-full/filtering/pangenie_all-samples_filtered.vcf.gz"
+
+# file with a list of dbSNP IDs specifying the
+# SNPs to be used for LD computation. One ID
+# per line.
+targets: "/gpfs/project/projects/medbioinf/users/ebler/SFB-grant-hadi/LD-analysis/SV-LD-analysis-main/grant-analysis/dbsnp-diabetes.tsv"
+
+# a PED file specifying trio relationships.
+# unrelated samples must be listed as well.
+ped: "/gpfs/project/projects/medbioinf/users/ebler/SFB-grant-hadi/LD-analysis/SV-LD-analysis-main/grant-analysis/1kg-hprc2-sample-sheet-withONT.tsv"
+
+# name of the output folder
+outname: "results" 

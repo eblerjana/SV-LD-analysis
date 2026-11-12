@@ -10,4 +10,6 @@ include: "rules/compute-ld.smk"
 
 rule all:
 	input:
-		expand("{results}/ld/ld-sv-targets.ld", results = RESULTS)
+		expand("{results}/ld/ld-sv-targets.ld", results = RESULTS),
+		expand("{results}/summary/LD-SV-hits.tsv", results = RESULTS),
+		expand("{results}/summary/LD-SV-hits.vcf.gz", results = RESULTS)

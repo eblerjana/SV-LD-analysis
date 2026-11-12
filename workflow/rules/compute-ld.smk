@@ -129,3 +129,45 @@ rule run_plink:
 		--ld-snp-list {input.target} --r2 --with-freqs \
 		--ld-window-kb 500 --ld-window 99999 --ld-window-r2 0.6 --out {params.outname}
 		"""
+
+
+rule analyze_results:
+	"""
+	Create some summaries for the results.
+	"""
+	input:
+		"{results}/ld/ld-sv-targets.ld"
+	output:
+		hits = "{results}/summary/LD-SV-hits.tsv",
+		ids = "{results}/summary/LD-SV-ids.tsv"
+	log:
+		"{results}/summary/LD-SV-hits.log"
+	shell:
+		"""
+		cat {input} | python3 workflow/scripts/analyze-hits.py {output.hits} {output.ids} &> {log}
+		"""
+
+
+rule create_hit_vcf:
+	"""
+	Create VCF with just SV hits. Subset of the original
+	input VCF, but with new IDs assigned.
+	"""
+	input:
+		vcf = GENOTYPES,
+		hits = "{results}/summary/LD-SV-ids.tsv",
+		id_mapping = "{results}/genotypes/genotypes-biallelic-svids.tsv"
+	output:
+		"{results}/summary/LD-SV-hits.vcf.gz"
+	benchmark:
+		"{results}/summary/LD-SV-hits_vcf.benchmark"
+	resources:
+		mem_mb = 10000,
+		walltime = "06:00:00"
+	conda:
+		"../envs/bcftools.yml"
+	shell:
+		"""
+		zcat {input.vcf} | python3 workflow/scripts/extract-hit-variants.py {input.id_mapping} {input.hits} | bgzip > {output}
+		tabix -p vcf {output}
+		"""
